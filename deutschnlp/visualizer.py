@@ -232,59 +232,61 @@ class DependencyVisualizer:
             label.text = token.dep_
     
     def _add_tokens(self, group, sentence, positions):
-        """
-        Add token texts and POS tags to the SVG.
+    """
+    Add token texts and POS tags to the SVG with improved styling.
+    
+    Args:
+        group: SVG group element to add tokens to
+        sentence: spaCy sentence
+        positions: Dictionary of token positions
+    """
+    # First add markers definition
+    defs = ET.SubElement(group, 'defs')
+    marker = ET.SubElement(defs, 'marker', {
+        'id': 'arrowhead',
+        'markerWidth': str(self.settings['arrow_size']),
+        'markerHeight': str(self.settings['arrow_size']),
+        'refX': '0',
+        'refY': str(self.settings['arrow_size'] / 2),
+        'orient': 'auto'
+    })
+    
+    arrow_path = ET.SubElement(marker, 'polygon', {
+        'points': f"0 0, {self.settings['arrow_size']} {self.settings['arrow_size'] / 2}, 0 {self.settings['arrow_size']}",
+        'fill': self.settings['colors']['arrow']
+    })
+    
+    # Add tokens
+    for token in sentence:
+        x = positions[token.i]['x']
+        y = positions[token.i]['y']
         
-        Args:
-            group: SVG group element to add tokens to
-            sentence: spaCy sentence
-            positions: Dictionary of token positions
-        """
-        # First add markers definition
-        defs = ET.SubElement(group, 'defs')
-        marker = ET.SubElement(defs, 'marker', {
-            'id': 'arrowhead',
-            'markerWidth': str(self.settings['arrow_size']),
-            'markerHeight': str(self.settings['arrow_size']),
-            'refX': '0',
-            'refY': str(self.settings['arrow_size'] / 2),
-            'orient': 'auto'
-        })
-        
-        arrow_path = ET.SubElement(marker, 'polygon', {
-            'points': f"0 0, {self.settings['arrow_size']} {self.settings['arrow_size'] / 2}, 0 {self.settings['arrow_size']}",
-            'fill': self.settings['colors']['arrow']
-        })
-        
-        # Add tokens
-        for token in sentence:
-            x = positions[token.i]['x']
-            y = positions[token.i]['y']
-            
-            # Token text
-            text_color = self.settings['colors']['text']
-            if token.dep_ == "ROOT":
-                text_color = self.settings['colors']['root']
+        # Token text
+        text_color = self.settings['colors']['text']
+        if token.dep_ == "ROOT":
+            text_color = self.settings['colors']['root']
+        elif token.pos_ == "VERB":
+            text_color = self.settings['colors']['verb']
                 
-            text_elem = ET.SubElement(group, 'text', {
-                'x': str(x),
-                'y': str(y),
-                'text-anchor': 'middle',
-                'font-size': str(self.settings['text_size']),
-                'font-weight': 'bold' if token.dep_ == "ROOT" else 'normal',
-                'fill': text_color
-            })
-            text_elem.text = token.text
-            
-            # POS tag
-            pos_elem = ET.SubElement(group, 'text', {
-                'x': str(x),
-                'y': str(y + 20),
-                'text-anchor': 'middle',
-                'font-size': str(self.settings['pos_size']),
-                'fill': self.settings['colors']['pos']
-            })
-            pos_elem.text = token.pos_
+        text_elem = ET.SubElement(group, 'text', {
+            'x': str(x),
+            'y': str(y),
+            'text-anchor': 'middle',
+            'font-size': str(self.settings['text_size']),
+            'font-weight': 'bold' if token.dep_ == "ROOT" or token.pos_ == "VERB" else 'normal',
+            'fill': text_color
+        })
+        text_elem.text = token.text
+        
+        # POS tag
+        pos_elem = ET.SubElement(group, 'text', {
+            'x': str(x),
+            'y': str(y + 20),
+            'text-anchor': 'middle',
+            'font-size': str(self.settings['pos_size']),
+            'fill': self.settings['colors']['pos']
+        })
+        pos_elem.text = token.pos_
 
 
 if __name__ == "__main__":

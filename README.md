@@ -42,7 +42,7 @@ deutschnlp/
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/deutschnlp.git
+git clone https://github.com/Tayer007/deutschnlp.git
 cd deutschnlp
 
 # Create a virtual environment

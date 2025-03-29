@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeutschNLP - German Text Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        header {
+            background-color: #4c6ec9;
+            color: white;
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        section {
+            background-color: white;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #4c6ec9;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 0.5rem;
+        }
+
+        .input-area {
+            margin-bottom: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            margin-bottom: 0.5rem;
+        }
+
+        button {
+            background-color: #4c6ec9;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            background-color: #3a5bb0;
+        }
+
+        .results {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 1rem;
+            min-height: 50px;
+            overflow-x: auto;
+        }
+
+        #visualization-results {
+            min-height: 300px;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
+        #visualization-results svg {
+            width: 100%;
+            height: auto;
+            min-height: 300px;
+        }
+
+        .example-btn {
+            background-color: #5cb85c;
+            margin-right: 10px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 1rem;
+            background-color: #333;
+            color: white;
+        }
+
+        .error {
+            color: #d9534f;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+            }
+            
+            section {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>DeutschNLP</h1>
+        <p>German Text Analysis Toolkit</p>
+    </header>
+    
+    <main>
+        <section id="analyzer">
+            <h2>Text Analysis</h2>
+            <div class="input-area">
+                <textarea id="analysis-text" placeholder="Enter German text to analyze..."></textarea>
+                <div>
+                    <button class="example-btn" id="analysis-example">Use Example</button>
+                    <button id="analyze-btn">Analyze</button>
+                </div>
+            </div>
+            <div id="analysis-results" class="results"></div>
+        </section>
+        
+        <section id="sentiment">
+            <h2>Sentiment Analysis</h2>
+            <div class="input-area">
+                <textarea id="sentiment-text" placeholder="Enter German text for sentiment analysis..."></textarea>
+                <div>
+                    <button class="example-btn" id="sentiment-example">Use Example</button>
+                    <button id="sentiment-btn">Analyze Sentiment</button>
+                </div>
+            </div>
+            <div id="sentiment-results" class="results"></div>
+        </section>
+        
+        <section id="comparison">
+            <h2>Text Comparison</h2>
+            <div class="input-area">
+                <textarea id="compare-text1" placeholder="First text..."></textarea>
+                <textarea id="compare-text2" placeholder="Second text..."></textarea>
+                <div>
+                    <button class="example-btn" id="comparison-example">Use Examples</button>
+                    <button id="compare-btn">Compare</button>
+                </div>
+            </div>
+            <div id="comparison-results" class="results"></div>
+        </section>
+        
+        <section id="visualization">
+            <h2>Dependency Visualization</h2>
+            <div class="input-area">
+                <textarea id="viz-text" placeholder="Enter a German sentence to visualize..."></textarea>
+                <div>
+                    <button class="example-btn" id="viz-example">Use Example</button>
+                    <button id="viz-btn">Visualize</button>
+                </div>
+            </div>
+            <div id="visualization-results" class="results"></div>
+        </section>
+    </main>
+    
+    <footer>
+        <p>DeutschNLP - A comprehensive toolkit for German language analysis</p>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Example texts
+            const examples = {
+                analysis: "Die digitale Transformation verändert unsere Gesellschaft grundlegend. In den letzten Jahren haben sich neue Technologien wie künstliche Intelligenz und maschinelles Lernen rasant entwickelt. Deutsche Unternehmen wie SAP und Bosch investieren Millionen in die Forschung, um international wettbewerbsfähig zu bleiben. Berlin hat sich mittlerweile als europäisches Zentrum für Start-ups etabliert.",
+                sentiment: "Das Essen in diesem Restaurant war ausgezeichnet! Der Service war sehr gut und das Personal äußerst freundlich. Die Atmosphäre war gemütlich und einladend. Ich werde definitiv wiederkommen.",
+                comparison1: "Berlin ist die Hauptstadt von Deutschland.",
+                comparison2: "Die Hauptstadt Deutschlands ist Berlin.",
+                visualization: "Die Sonne scheint hell über den Bergen, während die Kinder fröhlich im Tal spielen."
+            };
+            
+            // Set up example button handlers
+            document.getElementById('analysis-example').addEventListener('click', function() {
+                document.getElementById('analysis-text').value = examples.analysis;
+            });
+            
+            document.getElementById('sentiment-example').addEventListener('click', function() {
+                document.getElementById('sentiment-text').value = examples.sentiment;
+            });
+            
+            document.getElementById('comparison-example').addEventListener('click', function() {
+                document.getElementById('compare-text1').value = examples.comparison1;
+                document.getElementById('compare-text2').value = examples.comparison2;
+            });
+            
+            document.getElementById('viz-example').addEventListener('click', function() {
+                document.getElementById('viz-text').value = examples.visualization;
+            });
+            
+            // Text Analysis
+            document.getElementById('analyze-btn').addEventListener('click', function() {
+                const text = document.getElementById('analysis-text').value;
+                if (!text) return;
+                
+                const resultsDiv = document.getElementById('analysis-results');
+                resultsDiv.innerHTML = '<p class="loading">Analyzing text...</p>';
+                
+                fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    let html = '<h3>Analysis Results:</h3>';
+                    
+                    html += '<h4>Named Entities:</h4>';
+                    if (data.named_entities && data.named_entities.length > 0) {
+                        html += '<ul>';
+                        data.named_entities.forEach(function(entity) {
+                            html += `<li><strong>${entity[0]}</strong>: ${entity[1]}</li>`;
+                        });
+                        html += '</ul>';
+                    } else {
+                        html += '<p>No named entities found.</p>';
+                    }
+                    
+                    html += '<h4>Noun Chunks:</h4>';
+                    if (data.noun_chunks && data.noun_chunks.length > 0) {
+                        html += '<ul>';
+                        data.noun_chunks.forEach(function(chunk) {
+                            html += `<li>${chunk}</li>`;
+                        });
+                        html += '</ul>';
+                    } else {
+                        html += '<p>No noun chunks found.</p>';
+                    }
+                    
+                    html += '<h4>Parts of Speech (sample):</h4>';
+                    if (data.pos_tags && data.pos_tags.length > 0) {
+                        html += '<ul>';
+                        // Show only first 20 POS tags to avoid overwhelming display
+                        data.pos_tags.slice(0, 20).forEach(function(tag) {
+                            html += `<li><strong>${tag[0]}</strong>: ${tag[1]}</li>`;
+                        });
+                        if (data.pos_tags.length > 20) {
+                            html += `<li>... and ${data.pos_tags.length - 20} more</li>`;
+                        }
+                        html += '</ul>';
+                    }
+                    
+                    resultsDiv.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('analysis-results').innerHTML = 
+                        '<p class="error">Error analyzing text. Please try again.</p>';
+                });
+            });
+            
+            // Sentiment Analysis
+            document.getElementById('sentiment-btn').addEventListener('click', function() {
+                const text = document.getElementById('sentiment-text').value;
+                if (!text) return;
+                
+                const resultsDiv = document.getElementById('sentiment-results');
+                resultsDiv.innerHTML = '<p class="loading">Analyzing sentiment...</p>';
+                
+                fetch('/sentiment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    let html = '<h3>Sentiment Results:</h3>';
+                    
+                    let sentimentClass = '';
+                    if (data.overall_score > 0.5) sentimentClass = 'positive';
+                    else if (data.overall_score < -0.1) sentimentClass = 'negative';
+                    else sentimentClass = 'neutral';
+                    
+                    html += `<p><strong>Overall score:</strong> <span class="${sentimentClass}">${data.overall_score.toFixed(2)}</span></p>`;
+                    html += `<p><strong>Interpretation:</strong> ${data.interpretation}</p>`;
+                    
+                    html += '<h4>Sentence Breakdown:</h4>';
+                    if (data.sentences && data.sentences.length > 0) {
+                        html += '<ul>';
+                        data.sentences.forEach(function(sentence) {
+                            let sentClass = '';
+                            if (sentence.score > 0.5) sentClass = 'positive';
+                            else if (sentence.score < -0.1) sentClass = 'negative';
+                            else sentClass = 'neutral';
+                            
+                            html += `<li><strong class="${sentClass}">${sentence.score.toFixed(2)}:</strong> ${sentence.text}</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    
+                    resultsDiv.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('sentiment-results').innerHTML = 
+                        '<p class="error">Error analyzing sentiment. Please try again.</p>';
+                });
+            });
+            
+            // Text Comparison
+            document.getElementById('compare-btn').addEventListener('click', function() {
+                const text1 = document.getElementById('compare-text1').value;
+                const text2 = document.getElementById('compare-text2').value;
+                if (!text1 || !text2) return;
+                
+                const resultsDiv = document.getElementById('comparison-results');
+                resultsDiv.innerHTML = '<p class="loading">Comparing texts...</p>';
+                
+                fetch('/compare', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text1: text1, text2: text2 }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    let html = '<h3>Comparison Results:</h3>';
+                    
+                    // Create color based on similarity score
+                    const percentScore = (data.score * 100).toFixed(1);
+                    let scoreColor = '#d9534f'; // red for low similarity
+                    if (percentScore > 70) {
+                        scoreColor = '#5cb85c'; // green for high similarity
+                    } else if (percentScore > 40) {
+                        scoreColor = '#f0ad4e'; // yellow for medium similarity
+                    }
+                    
+                    html += `<p><strong>Similarity score:</strong> <span style="color:${scoreColor}; font-weight:bold;">${percentScore}%</span></p>`;
+                    
+                    // Show detailed metrics
+                    html += '<h4>Similarity Metrics:</h4>';
+                    html += '<ul>';
+                    for (const [metric, score] of Object.entries(data.details)) {
+                        html += `<li><strong>${metric.replace('_', ' ')}:</strong> ${(score * 100).toFixed(1)}%</li>`;
+                    }
+                    html += '</ul>';
+                    
+                    html += '<h4>Common Entities:</h4>';
+                    if (data.common_entities && data.common_entities.length > 0) {
+                        html += '<ul>';
+                        data.common_entities.forEach(function(entity) {
+                            html += `<li>${entity}</li>`;
+                        });
+                        html += '</ul>';
+                    } else {
+                        html += '<p>No common entities found.</p>';
+                    }
+                    
+                    html += '<h4>Common Nouns:</h4>';
+                    if (data.common_nouns && data.common_nouns.length > 0) {
+                        html += '<ul>';
+                        data.common_nouns.forEach(function(noun) {
+                            html += `<li>${noun}</li>`;
+                        });
+                        html += '</ul>';
+                    } else {
+                        html += '<p>No common nouns found.</p>';
+                    }
+                    
+                    resultsDiv.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('comparison-results').innerHTML = 
+                        '<p class="error">Error comparing texts. Please try again.</p>';
+                });
+            });
+            
+            // Dependency Visualization
+            document.getElementById('viz-btn').addEventListener('click', function() {
+                const text = document.getElementById('viz-text').value;
+                if (!text) return;
+                
+                const resultsDiv = document.getElementById('visualization-results');
+                resultsDiv.innerHTML = '<p class="loading">Generating visualization...</p>';
+                
+                fetch('/visualize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Fix SVG display issues
+                    let svg = data.svg;
+                    
+                    // Make sure SVG has width="100%" for proper scaling
+                    svg = svg.replace('<svg', '<svg width="100%" height="100%"');
+                    
+                    resultsDiv.innerHTML = svg;
+                    
+                    // Ensure proper sizing after rendering
+                    const svgElement = resultsDiv.querySelector('svg');
+                    if (svgElement) {
+                        // Adjust height dynamically based on content
+                        const contentHeight = svgElement.getBBox ? svgElement.getBBox().height : 400;
+                        svgElement.setAttribute('height', Math.max(contentHeight + 100, 400));
+                        
+                        // Make sure viewBox is set correctly
+                        if (!svgElement.getAttribute('viewBox')) {
+                            const width = svgElement.getAttribute('width') || 800;
+                            const height = svgElement.getAttribute('height') || 400;
+                            svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('visualization-results').innerHTML = 
+                        '<p class="error">Error generating visualization. Please try again.</p>';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

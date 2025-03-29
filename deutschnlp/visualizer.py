@@ -42,88 +42,100 @@ class DependencyVisualizer:
             }
         }
     
-    def visualize(self, text: str) -> str:
-        """
-        Generate an SVG visualization of the dependency tree for a sentence.
-        
-        Args:
-            text: German text to visualize (preferably a single sentence)
-            
-        Returns:
-            SVG markup as a string
-        """
-        # Parse text with spaCy
-        doc = self.nlp(text)
-        
-        # Create SVG element
-        svg = ET.Element('svg', {
-            'xmlns': 'http://www.w3.org/2000/svg',
-            'width': str(self.settings['width']),
-            'height': str(self.settings['height']),
-            'viewBox': f"0 0 {self.settings['width']} {self.settings['height']}",
-        })
-        
-        # Add background
-        ET.SubElement(svg, 'rect', {
-            'width': '100%',
-            'height': '100%',
-            'fill': self.settings['colors']['background'],
-        })
-        
-        # Get the first sentence if multiple
-        if len(list(doc.sents)) > 1:
-            sentence = next(doc.sents)
-        else:
-            sentence = doc
-        
-        # Get tokens and their positions
-        tokens, token_positions = self._layout_tokens(sentence)
-        
-        # Calculate actual height needed
-        max_y = max([pos['y'] for pos in token_positions.values()]) + 100
-        svg.set('height', str(max_y))
-        svg.set('viewBox', f"0 0 {self.settings['width']} {max_y}")
-        
-        # Add dependencies (arrows)
-        dependencies_group = ET.SubElement(svg, 'g', {'class': 'dependencies'})
-        self._add_dependency_arrows(dependencies_group, sentence, token_positions)
-        
-        # Add tokens (text and POS tags)
-        tokens_group = ET.SubElement(svg, 'g', {'class': 'tokens'})
-        self._add_tokens(tokens_group, sentence, token_positions)
-        
-        # Convert to string
-        return ET.tostring(svg, encoding='unicode')
+    def visualize(self, text):
+    """
+    Generate an SVG visualization of the dependency tree for a sentence.
     
-    def _layout_tokens(self, sentence) -> Tuple[List, Dict]:
-        """
-        Calculate layout positions for tokens.
+    Args:
+        text: German text to visualize (preferably a single sentence)
         
-        Args:
-            sentence: spaCy sentence
-            
-        Returns:
-            Tuple of (tokens list, token positions dictionary)
-        """
-        tokens = list(sentence)
+    Returns:
+        SVG markup as a string
+    """
+    # Parse text with spaCy
+    doc = self.nlp(text)
+    
+    # Get the first sentence if multiple
+    if len(list(doc.sents)) > 1:
+        sentence = next(doc.sents)
+    else:
+        sentence = doc
+    
+    # Adjust default width based on sentence length
+    self.settings['width'] = max(800, len(sentence) * 120)
+    
+    # Create SVG element
+    svg = ET.Element('svg', {
+        'xmlns': 'http://www.w3.org/2000/svg',
+        'width': '100%',
+        'height': str(self.settings['height']),
+        'viewBox': f"0 0 {self.settings['width']} {self.settings['height']}",
+        'style': 'overflow: visible;'
+    })
+    
+    # Add background
+    ET.SubElement(svg, 'rect', {
+        'width': '100%',
+        'height': '100%',
+        'fill': self.settings['colors']['background'],
+    })
+    
+    # Get tokens and their positions
+    tokens, token_positions = self._layout_tokens(sentence)
+    
+    # Calculate actual height needed
+    max_y = max([pos['y'] for pos in token_positions.values()]) + 150
+    svg.set('height', str(max_y))
+    svg.set('viewBox', f"0 0 {self.settings['width']} {max_y}")
+    
+    # Add dependencies (arrows)
+    dependencies_group = ET.SubElement(svg, 'g', {'class': 'dependencies'})
+    self._add_dependency_arrows(dependencies_group, sentence, token_positions)
+    
+    # Add tokens (text and POS tags)
+    tokens_group = ET.SubElement(svg, 'g', {'class': 'tokens'})
+    self._add_tokens(tokens_group, sentence, token_positions)
+    
+    # Convert to string
+    return ET.tostring(svg, encoding='unicode')
+    
+   def _layout_tokens(self, sentence):
+    """
+    Calculate layout positions for tokens with improved layout for complex sentences.
+    
+    Args:
+        sentence: spaCy sentence
         
-        # Calculate token positions
-        positions = {}
-        token_width = self.settings['token_spacing']
-        base_x = self.settings['padding']
-        base_y = 300  # Start tokens in the middle vertically
-        
-        for i, token in enumerate(tokens):
-            positions[token.i] = {
-                'x': base_x + i * token_width,
-                'y': base_y,
-                'width': token_width
-            }
-        
-        # Adjust vertical positions based on dependency tree
-        self._adjust_vertical_positions(tokens, positions)
-        
-        return tokens, positions
+    Returns:
+        Tuple of (tokens list, token positions dictionary)
+    """
+    tokens = list(sentence)
+    
+    # Calculate token positions
+    positions = {}
+    token_width = self.settings['token_spacing']
+    base_x = self.settings['padding']
+    base_y = 200  # Start tokens a bit higher
+    
+    # First pass - assign horizontal positions
+    for i, token in enumerate(tokens):
+        positions[token.i] = {
+            'x': base_x + i * token_width,
+            'y': base_y,
+            'width': token_width
+        }
+    
+    # Adjust vertical positions based on dependency tree
+    self._adjust_vertical_positions(tokens, positions)
+    
+    # Calculate the overall width needed
+    max_x = max([pos['x'] + pos['width'] for pos in positions.values()]) + self.settings['padding']
+    
+    # Adjust SVG width if needed
+    if max_x > self.settings['width']:
+        self.settings['width'] = max_x
+    
+    return tokens, positions
     
     def _adjust_vertical_positions(self, tokens, positions):
         """

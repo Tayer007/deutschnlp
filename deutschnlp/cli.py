@@ -86,4 +86,108 @@ def print_analysis_result(result, format_type='pretty'):
     
     print("\nNamed Entities:")
     if result.named_entities:
-        for entity,
+        for entity, label in result.named_entities:
+            print(f"  {entity}: {label}")
+    else:
+        print("  None found")
+    
+    print("\nNoun Chunks:")
+    if result.noun_chunks:
+        for chunk in result.noun_chunks:
+            print(f"  {chunk}")
+    else:
+        print("  None found")
+    
+    print("\nWord Frequencies:")
+    for word, count in list(result.word_frequencies.items())[:10]:  # Show top 10
+        print(f"  {word}: {count}")
+
+
+def main():
+    """Main entry point for the CLI."""
+    parser = setup_parser()
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+    
+    # Initialize appropriate analyzers based on command
+    if args.command in ['analyze', 'analyze-file']:
+        analyzer = GermanAnalyzer()
+        
+        if args.command == 'analyze':
+            result = analyzer.analyze(args.text)
+            print_analysis_result(result, args.format)
+        else:  # analyze-file
+            result = analyzer.analyze_file(args.file)
+            
+            if args.output:
+                with open(args.output, 'w', encoding='utf-8') as f:
+                    f.write(result.to_json(pretty=True))
+                print(f"Analysis saved to {args.output}")
+            else:
+                print_analysis_result(result, args.format)
+    
+    elif args.command == 'sentiment':
+        sentiment_analyzer = SentimentAnalyzer()
+        
+        if args.detailed:
+            result = sentiment_analyzer.analyze_detailed(args.text)
+            print(f"Text: {args.text}")
+            print(f"Overall sentiment: {result['overall_score']:.2f} ({result['interpretation']})")
+            print("\nSentiment by sentence:")
+            for sentence in result['sentences']:
+                print(f"  \"{sentence['text']}\"")
+                print(f"  Score: {sentence['score']:.2f}")
+                print()
+        else:
+            score = sentiment_analyzer.analyze(args.text)
+            interpretation = sentiment_analyzer._interpret_score(score)
+            print(f"Text: {args.text}")
+            print(f"Sentiment: {score:.2f} ({interpretation})")
+    
+    elif args.command == 'compare':
+        comparator = TextComparator()
+        
+        result = comparator.compare(args.text1, args.text2)
+        print(f"Text 1: {args.text1}")
+        print(f"Text 2: {args.text2}")
+        print(f"Similarity score: {result.score:.2f}")
+        
+        print("\nDetails:")
+        for metric, score in result.details.items():
+            print(f"  {metric}: {score:.2f}")
+        
+        if result.common_entities:
+            print("\nCommon entities:")
+            for entity in result.common_entities:
+                print(f"  {entity}")
+        
+        if result.common_nouns:
+            print("\nCommon nouns:")
+            for noun in result.common_nouns:
+                print(f"  {noun}")
+        
+        if args.find_similar:
+            similar_sentences = comparator.find_similar_sentences(
+                args.text1, args.text2, threshold=args.threshold
+            )
+            
+            if similar_sentences:
+                print("\nSimilar sentences:")
+                for sent1, sent2, score in similar_sentences:
+                    print(f"  Score: {score:.2f}")
+                    print(f"  Text 1: \"{sent1}\"")
+                    print(f"  Text 2: \"{sent2}\"")
+                    print()
+            else:
+                print("\nNo similar sentences found above threshold.")
+    
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

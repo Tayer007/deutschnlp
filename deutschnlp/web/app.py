@@ -1,16 +1,16 @@
 import os
 import sys
-import json
-from flask import Flask, render_template, request, jsonify
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add parent directory to path so deutschnlp can be imported
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # Import our modules
 from deutschnlp.analyzer import GermanAnalyzer
 from deutschnlp.sentiment import SentimentAnalyzer
 from deutschnlp.similarity import TextComparator
 from deutschnlp.visualizer import DependencyVisualizer
+from deutschnlp.bert_models import BERTModels  # Import the new BERT models class
+
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
@@ -19,6 +19,16 @@ analyzer = GermanAnalyzer()
 sentiment_analyzer = SentimentAnalyzer()
 comparator = TextComparator()
 visualizer = DependencyVisualizer()
+
+# Initialize BERT models (lazy loading - will only initialize when needed)
+bert_models = None
+
+def get_bert_models():
+    """Lazy initialization of BERT models"""
+    global bert_models
+    if bert_models is None:
+        bert_models = BERTModels(use_gpu=False)
+    return bert_models
 
 @app.route('/')
 def index():
@@ -30,29 +40,55 @@ def analyze_text():
     """Analyze text and return the results."""
     data = request.json
     text = data.get('text', '')
+    model = data.get('model', 'spacy')  # Default to spaCy if not specified
     
     if not text:
         return jsonify({'error': 'No text provided'}), 400
     
-    # Perform analysis
-    result = analyzer.analyze(text)
-    
-    # Convert to dictionary for JSON response
-    return jsonify(result.to_dict())
+    # Perform analysis based on selected model
+    if model == 'spacy':
+        # Use spaCy analyzer
+        result = analyzer.analyze(text)
+        # Convert to dictionary for JSON response
+        return jsonify(result.to_dict())
+    elif model == 'bert':
+        # Use BERT models
+        bert = get_bert_models()
+        
+        # Perform analysis with spaCy for basic features
+        basic_result = analyzer.analyze(text)
+        result_dict = basic_result.to_dict()
+        
+        # Replace named entities with BERT results
+        bert_entities = bert.analyze_entities(text)
+        result_dict['named_entities'] = bert_entities
+        
+        return jsonify(result_dict)
+    else:
+        return jsonify({'error': 'Invalid model specified'}), 400
 
 @app.route('/sentiment', methods=['POST'])
 def analyze_sentiment():
     """Analyze sentiment and return the results."""
     data = request.json
     text = data.get('text', '')
+    model = data.get('model', 'spacy')  # Default to spaCy if not specified
     
     if not text:
         return jsonify({'error': 'No text provided'}), 400
     
-    # Perform sentiment analysis
-    result = sentiment_analyzer.analyze_detailed(text)
-    
-    return jsonify(result)
+    # Perform sentiment analysis based on selected model
+    if model == 'spacy':
+        # Use spaCy sentiment analyzer
+        result = sentiment_analyzer.analyze_detailed(text)
+        return jsonify(result)
+    elif model == 'bert':
+        # Use BERT sentiment analyzer
+        bert = get_bert_models()
+        result = bert.analyze_sentiment(text)
+        return jsonify(result)
+    else:
+        return jsonify({'error': 'Invalid model specified'}), 400
 
 @app.route('/compare', methods=['POST'])
 def compare_texts():
@@ -88,31 +124,6 @@ def visualize_dependencies():
     svg_content = visualizer.visualize(text)
     
     return jsonify({'svg': svg_content})
-
-@app.route('/similar_sentences', methods=['POST'])
-def find_similar_sentences():
-    """Find similar sentences between two texts."""
-    data = request.json
-    text1 = data.get('text1', '')
-    text2 = data.get('text2', '')
-    threshold = data.get('threshold', 0.7)
-    
-    if not text1 or not text2:
-        return jsonify({'error': 'Two texts are required'}), 400
-    
-    # Find similar sentences
-    result = comparator.find_similar_sentences(text1, text2, threshold=threshold)
-    
-    # Convert to list of dictionaries
-    similar_sentences = []
-    for sent1, sent2, score in result:
-        similar_sentences.append({
-            'sentence1': sent1,
-            'sentence2': sent2,
-            'score': score
-        })
-    
-    return jsonify({'similar_sentences': similar_sentences})
 
 if __name__ == '__main__':
     # Check if templates directory exists, if not, create a warning

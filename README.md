@@ -117,6 +117,8 @@ DeutschNLP integrates state-of-the-art BERT models for German:
 
 These provide higher accuracy compared to traditional models, particularly for complex texts. The web interface allows direct comparison between spaCy and BERT results.
 
+**Note**: The first time you use the BERT functionality, the models will be automatically downloaded from Hugging Face (approximately 1.2GB for both models). This initial download may take several minutes depending on your internet connection. The models are cached locally after the first use, so subsequent runs will be much faster.
+
 ## Project Structure
 
 ```
